@@ -1,0 +1,110 @@
+
+.Enfant h2 {
+    color: azure;
+    font-size: 1,2rem;
+    display: flex;
+
+}
+
+.ecran-enfant {
+  flex: 1;
+  background-image: url("../assets/images/background.png");
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.enfant-header {
+  position: relative;
+  z-index: 10;
+  background: rgba(0,0,0,0.25);
+  padding: 0.8rem 1.2rem;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  font-family: monospace;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.sol {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 50px;
+  background: #5d4037;
+}
+
+.herbe {
+  position: absolute;
+  bottom: 50px;
+  width: 100%;
+  height: 18px;
+  background: #4CAF50;
+}
+
+.joueur {
+  position: absolute;
+  left: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.2s, height 0.2s;
+}
+
+.obstacle {
+  position: absolute;
+  bottom: 68px;
+  width: 28px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: white;
+  font-family: monospace;
+  font-size: 1.1rem;
+  z-index: 20;
+}
+
+.overlay div {
+  font-size: 3rem;
+}
+
+.overlay button {
+  padding: 10px 28px;
+  background: #FF6B35;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    width: 100vh;
+}
+
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
