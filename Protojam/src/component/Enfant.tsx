@@ -1,4 +1,4 @@
-import {useState, useEffect, useRef } from "react"
+import {useState, useEffect, useRef} from "react"
 import "../style/Enfant.css"
 import playerImg from "../assets/images/player.png"
 import playerJump from "../assets/images/playerjump.png"
@@ -9,17 +9,23 @@ import CactusImg from "../assets/images/cactus.png"
 interface EnfantProps {
     code:string
 }
+interface Vars {
+  vitesse: number
+  couleur: string
+  taille: number
+  obstacles: number
+    espace: number 
+}
 
-function parseVars(code: string) {
-    const vars: Record<string, any> = {
-    vitesse: 3,
-    couleur: "rouge",
-    taille: 50,
-  }
-  for (const m of code.matchAll(/let\s+(\w+)\s=\s(.+?);/g)) {
-    let val: any = m[2].trim().replace(/['"]/g, "")
-    if (!isNaN(val)) val = Number(val)
-    vars[m[1]] = val
+function parseVars(code: string): Vars {
+  const vars: Vars = { vitesse: 3, couleur: "rouge", taille: 50, obstacles: 1, espace: 300 }
+  for (const m of code.matchAll(/let\s+(\w+)\s*=\s*(.+?);/g)) {
+    const key = m[1] as keyof Vars
+    const raw = m[2].trim().replace(/['"]/g, "")
+    const val = isNaN(Number(raw)) ? raw : Number(raw)
+    if (key in vars) {
+      (vars[key] as string | number) = val
+    }
   }
   return vars
 }
@@ -27,15 +33,18 @@ function parseVars(code: string) {
 const GROUND = 220
 const OBS_W = 28
 const OBS_H = 40
+const SCORE_MAX = 10
 
 export default function Enfant ({code}: EnfantProps ) {
     const vars = parseVars(code)
     const varsRef = useRef(vars)
 
-  const [posX, setPosX] = useState<number>(60)
+ 
   const [posY, setPosY] = useState<number>(GROUND)
   const [jumping, setJumping] = useState<boolean>(false)
-  const [obstacles, setObstacles] = useState([{ x: 500 }, { x: 800 }])
+  const [obstacles, setObstacles] = useState(Array.from({ length: vars.obstacles }, (_, i) => ({ x: 500 + i * 500 }))
+)
+  const [win, setWin]= useState<boolean>(false)
   const [score, setScore] = useState<number>(0)
   const [dead, setDead] = useState<boolean>(false)
   const [started, setStarted] = useState<boolean>(false)
@@ -46,22 +55,26 @@ export default function Enfant ({code}: EnfantProps ) {
 
   useEffect(() => {
     varsRef.current = vars
-  }, [vars.vitesse, vars.taille, vars.obstacles])
+}, [vars])
 
   useEffect(() => {
     posYRef.current = posY
   }, [posY])
 
   // Saut
-  const doJump = () => {
+  
+
+  // Espace pour sauter
+  useEffect(() => {
+    const doJump = () => {
     if (jumpRef.current || deadRef.current) return
     jumpRef.current = true
     setJumping(true)
     let py = GROUND
     let up = true
     const t = setInterval(() => {
-      py = up ? py - 14 : py + 7
-      if (py <= 40) up = false
+      py = up ? py - 22 : py + 7
+      if (py <= 0) up = false
       if (py >= GROUND) {
         py = GROUND
         jumpRef.current = false
@@ -69,11 +82,8 @@ export default function Enfant ({code}: EnfantProps ) {
         clearInterval(t)
       }
       setPosY(py)
-    }, 25)
+    }, 50)
   }
-
-  // Espace pour sauter
-  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space") { e.preventDefault(); doJump() }
     }
@@ -83,14 +93,15 @@ export default function Enfant ({code}: EnfantProps ) {
 
   // Boucle de jeu
   useEffect(() => {
-    if (!started || dead) return
+    if (!started || dead || win) return
     deadRef.current = false
 
     const loop = setInterval(() => {
       const v = varsRef.current
       const speed = Math.min(Math.max(v.vitesse || 3, 1), 12)
       const taille = Math.min(Math.max(v.taille || 50, 20), 80)
-
+const numObs = Math.min(Math.max(Math.round(v.obstacles || 1), 1), 4)
+  const espace = Math.min(Math.max(v.espace || 300, 100), 800)
       setObstacles(prev => {
         let next = prev.map(o => ({ x: o.x - speed }))
 
@@ -108,25 +119,45 @@ export default function Enfant ({code}: EnfantProps ) {
         }
 
         // Reset obstacles
-        next = next.map(o => {
-          if (o.x < -OBS_W) {
-            setScore(s => s + 1)
-            const maxX = Math.max(...next.map(n => n.x))
-            return { x: maxX + 200 + Math.random() * 100 }
-          }
-          return o
-        })
+       // Reset obstacles qui sortent — ils réapparaissent en groupe
+next = next.map((o, i) => {
+  if (o.x < -OBS_W) {
 
+    setScore(prev => {
+      const newScore = prev + 1
+      if (newScore >= SCORE_MAX) {
+        deadRef.current = true
+        setWin(true)
+      }
+      return newScore
+    })
+
+    const maxX = Math.max(...next.map(n => n.x))
+    return { x: maxX + espace + (i % numObs) * 80 }
+  }
+
+  return o
+})
+
+    
+
+    while (next.length < numObs) {
+      const maxX = Math.max(...next.map(n => n.x), 500)
+      next.push({ x: maxX + 300})
+    }
+    while (next.length > numObs) next.pop()
         return next
       })
     }, 30)
 
     return () => clearInterval(loop)
-  }, [started, dead])
+  }, [started, dead, win])
 
   const taille = Math.min(Math.max(vars.taille || 50, 20), 80)
 
   const restart = () => {
+    setStarted(false)
+    setWin(false)
     setDead(false)
     deadRef.current = false
     setScore(0)
@@ -134,11 +165,33 @@ export default function Enfant ({code}: EnfantProps ) {
     posYRef.current = GROUND
     jumpRef.current = false
     setJumping(false)
-    setObstacles([{ x: 500 }, { x: 800 }])
+    setObstacles(
+  Array.from(
+    { length: varsRef.current.obstacles },
+    (_, i) => ({ x: 500 + i * 300 })
+  )
+)
   }
-
+const handleClick = () => {
+    if (jumpRef.current || deadRef.current) return
+    jumpRef.current = true
+    setJumping(true)
+    let py = GROUND
+    let up = true
+    const t = setInterval(() => {
+      py = up ? py - 22 : py + 7
+      if (py <= 0) up = false
+      if (py >= GROUND) {
+        py = GROUND
+        jumpRef.current = false
+        setJumping(false)
+        clearInterval(t)
+      }
+      setPosY(py)
+    }, 20)
+  }
   return (
-    <div className="ecran-enfant" onClick={doJump}>
+    <div className="ecran-enfant" onClick={handleClick}>
 
       {/* Header */}
       <div className="enfant-header">
@@ -165,6 +218,20 @@ export default function Enfant ({code}: EnfantProps ) {
         {dead ? <img src = {playerDead} alt="playerdead" style={{width:`${vars.taille}px`, height: `${vars.taille}px`}}/> : jumping ? <img src = {playerJump} alt="playerjump" style={{width:`${vars.taille}px`, height: `${vars.taille}px`}}/> : <img src = {playerImg} alt="player" style={{width:`${vars.taille}px`, height: `${vars.taille}px`}}/>}
       </div>
 
+      {/* Écran victoire */}
+{win && (
+  <div className="overlay">
+    <div>🏆</div>
+    <p>Bravo ! Tu as gagné avec {score} points !</p>
+    <button onClick={(e) => {
+      e.stopPropagation()
+      setWin(false)
+      restart()
+    }}>
+      Rejouer 🔄
+    </button>
+  </div>
+)}
       {/* Écran mort */}
       {dead && (
         <div className="overlay">
