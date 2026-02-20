@@ -30,6 +30,7 @@ export default function Parent({ code, setCode }: ParentProps) {
         Change les valeurs pour aider (ou piéger 😈) ton enfant !<br />
         <span className="tag-jaune">vitesse</span> 1→12 &nbsp;
         <span className="tag-jaune">niveau</span> 10→20<br />
+        <span className="tag-jaune">score</span> 1→40<br />
         <span className="tag-jaune">taille</span> 20→80 &nbsp;
         <span className="tag-jaune">obstacles</span> 1→4
       </div>
