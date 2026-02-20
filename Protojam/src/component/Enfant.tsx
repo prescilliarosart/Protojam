@@ -12,7 +12,7 @@ interface EnfantProps {
 
 interface Vars {
   vitesse: number;
-  couleur: string;
+  niveau: number;
   taille: number;
   obstacles: number;
   espace: number;
@@ -21,7 +21,7 @@ interface Vars {
 function parseVars(code: string): Vars {
   const vars: Vars = {
     vitesse: 3,
-    couleur: "rouge",
+    niveau: 10,
     taille: 50,
     obstacles: 1,
     espace: 300,
@@ -53,7 +53,7 @@ function parseConditions(code: string, score: number, vars: Vars): Vars {
 const GROUND = 220;
 const OBS_W = 28;
 const OBS_H = 40;
-const SCORE_MAX = 10;
+
 
 export default function Enfant({ code }: EnfantProps) {
   const vars = parseVars(code);
@@ -92,8 +92,8 @@ export default function Enfant({ code }: EnfantProps) {
     jumpRef.current = true
     setJumping(true)
     let py = GROUND
-    let vy = -35 
-    const gravity = 1.5
+    let vy = -25 
+    const gravity = 1
     const t = setInterval(() => {
       py += vy
       vy += gravity
@@ -107,7 +107,7 @@ export default function Enfant({ code }: EnfantProps) {
         clearInterval(t)
       }
       setPosY(py)
-    }, 20)
+    }, 25)
   }
 
   useEffect(() => {
@@ -122,69 +122,81 @@ export default function Enfant({ code }: EnfantProps) {
   }, []);
 
   // Boucle de jeu
-  useEffect(() => {
-    if (!started || dead || win) return;
-    deadRef.current = false;
+useEffect(() => {
+  if (!started || dead || win) return;
+  deadRef.current = false;
 
-    const loop = setInterval(() => {
-      const v = parseConditions(code, scoreRef.current, varsRef.current)
-      let speed = Math.min(Math.max(v.vitesse || 3, 1), 12);
-      const taille = Math.min(Math.max(v.taille || 50, 20), 80);
-      const numObs = Math.min(Math.max(Math.round(v.obstacles || 1), 1), 4);
-      const espace = Math.min(Math.max(v.espace || 300, 100), 800);
-      setObstacles((prev) => {
-        let next = prev.map((o) => ({ x: o.x - speed }));
+  const loop = setInterval(() => {
+    const v = parseConditions(code, scoreRef.current, varsRef.current);
 
-        // Collision
-        for (const o of next) {
-          const hit =
-            o.x < 60 + taille - 10 &&
-            o.x + OBS_W > 60 + 10 &&
-            posYRef.current + taille / 2 > GROUND - OBS_H + 5;
-          if (hit) {
-            deadRef.current = true;
-            setDead(true);
-            return prev;
-          }
+    const speed = Math.min(Math.max(v.vitesse || 3, 1), 12);
+    const taille = Math.min(Math.max(v.taille || 50, 20), 80);
+    const numObs = Math.min(Math.max(Math.round(v.obstacles || 1), 1), 4);
+    const espace = Math.min(Math.max(v.espace || 300, 100), 800);
+
+    setObstacles((prev) => {
+      let next = prev.map((o) => ({ x: o.x - speed }));
+
+      // 🔥 COLLISION
+      for (const o of next) {
+        const hit =
+          o.x < 60 + taille - 10 &&
+          o.x + OBS_W > 60 + 10 &&
+          posYRef.current + taille / 2 > GROUND - OBS_H + 5;
+
+        if (hit) {
+          deadRef.current = true;
+          setDead(true);
+          return prev;
         }
+      }
 
-        // Reset obstacles
-        // Reset obstacles qui sortent — ils réapparaissent en groupe
-        const nbSortants = next.filter((o) => o.x < -OBS_W).length;
+      // 🔥 SCORE quand obstacle sort
+      const nbSortants = next.filter((o) => o.x < -OBS_W).length;
 
-        if (nbSortants > 0 && !scoredRef.current) {
-          scoredRef.current = true;
-          setScore((prev) => {
-            const newScore = prev + 1;
-            if (newScore >= SCORE_MAX) {
-              deadRef.current = true;
-              setWin(true);
-            }
-            return newScore;
-          });
-        } else if (nbSortants === 0) {
-          scoredRef.current = false;
+      if (nbSortants > 0 && !scoredRef.current) {
+        scoredRef.current = true;
+
+        const newScore = scoreRef.current + 1;
+        scoreRef.current = newScore;
+        setScore(newScore);
+
+        if (newScore >= v.niveau) {
+          deadRef.current = true;
+          setWin(true);
         }
+      }
 
-        next = next.map((o, i) => {
-          if (o.x < -OBS_W) {
-            const maxX = Math.max(...next.map((n) => n.x));
-            return { x: maxX + espace + (i % numObs) * 80 };
-          }
-          return o;
-        });
+      if (nbSortants === 0) {
+        scoredRef.current = false;
+      }
 
-        while (next.length < numObs) {
-          const maxX = Math.max(...next.map((n) => n.x), 500);
-          next.push({ x: maxX + 300 });
+      // 🔥 Reset obstacles
+      next = next.map((o, i) => {
+        if (o.x < -OBS_W) {
+          const maxX = Math.max(...next.map((n) => n.x));
+          return { x: maxX + espace + (i % numObs) * 80 };
         }
-        while (next.length > numObs) next.pop();
-        return next;
+        return o;
       });
-    }, 30);
 
-    return () => clearInterval(loop);
-  }, [started, dead, win]);
+      while (next.length < numObs) {
+        const maxX = Math.max(...next.map((n) => n.x), 500);
+        next.push({ x: maxX + espace });
+      }
+
+      while (next.length > numObs) {
+        next.pop();
+      }
+
+      return next;
+    });
+
+  }, 30);
+
+  return () => clearInterval(loop);
+
+}, [started, dead, win, code]);
 
   const taille = Math.min(Math.max(vars.taille || 50, 20), 80);
 
@@ -204,26 +216,9 @@ export default function Enfant({ code }: EnfantProps) {
       })),
     );
   };
-  const handleClick = () => {
-    if (jumpRef.current || deadRef.current) return;
-    jumpRef.current = true;
-    setJumping(true);
-    let py = GROUND;
-    let up = true;
-    const t = setInterval(() => {
-      py = up ? py - 22 : py + 7;
-      if (py <= 0) up = false;
-      if (py >= GROUND) {
-        py = GROUND;
-        jumpRef.current = false;
-        setJumping(false);
-        clearInterval(t);
-      }
-      setPosY(py);
-    }, 20);
-  };
+
   return (
-    <div className="ecran-enfant" onClick={handleClick}>
+    <div className="ecran-enfant" onClick={doJump}>
       {/* Header */}
       <div className="enfant-header">
         <span>🎮 Ecran Enfant</span>
