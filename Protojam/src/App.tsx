@@ -4,9 +4,9 @@ import Parent from "./component/Parent"
 import EcranEnfant from "./component/Enfant"
 
 const CODE_DEPART = `let vitesse = 3;
-let couleur = "rouge";
 let taille = 50;
-let obstacles = 1;`
+let obstacles = 1;
+if (score > 5) { vitesse = 3; }`
 
 export default function App() {
   const [code, setCode] = useState<string>(CODE_DEPART)
@@ -14,7 +14,7 @@ export default function App() {
   return (
     <div className="container">
       <Parent code={code} setCode={setCode} />
-      <EcranEnfant code={code} />
+      <EcranEnfant code={code}/>
     </div>
   )
 }
