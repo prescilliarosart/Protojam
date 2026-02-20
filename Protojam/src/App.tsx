@@ -1,10 +1,10 @@
 import { useState } from "react"
 import "./App.css"
 import Parent from "./component/Parent"
-import EcranEnfant from "./component/Enfant"
+import Enfant from "./component/Enfant"
 
 const CODE_DEPART = `let vitesse = 3;
-let couleur = "rouge";
+let niveau = 10;
 let taille = 50;
 let obstacles = 1;`
 
@@ -14,7 +14,7 @@ export default function App() {
   return (
     <div className="container">
       <Parent code={code} setCode={setCode} />
-      <EcranEnfant code={code} />
+      <Enfant code={code} />
     </div>
   )
 }
